@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>לוח זמני היום - קרית אתא</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .zmanim-board {
+            width: 100%;
+            max-width: 500px;
+            background-color: #1e1e1e;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+            border: 2px solid #daa520;
+        }
+
+        .header {
+            background-color: #2c2c2c;
+            text-align: center;
+            padding: 20px;
+            border-bottom: 1px solid #444;
+        }
+
+        #hebrew-date {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #daa520;
+            margin-bottom: 5px;
+        }
+
+        #gregorian-date {
+            font-size: 1em;
+            color: #aaaaaa;
+        }
+
+        #parasha {
+            font-size: 1.1em;
+            color: #8faae8;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .zmanim-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .zman-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            font-size: 1.2em;
+            align-items: center;
+        }
+
+        .zman-item:last-child {
+            border-bottom: none;
+        }
+
+        .zman-label {
+            color: #e0e0e0;
+        }
+
+        .zman-time {
+            font-weight: bold;
+            color: #4db6ac;
+        }
+
+        /* עיצוב מיוחד לשורת תפילת מנחה */
+        .special-mincha {
+            background-color: rgba(218, 165, 32, 0.2); /* רקע צהוב-זהב עדין */
+            border-top: 2px solid #daa520;
+            border-bottom: 2px solid #daa520;
+            padding: 20px; /* קצת יותר מרווח */
+        }
+        
+        .special-mincha .zman-label {
+            color: #ffeb3b; /* צהוב בהיר */
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .special-mincha .zman-time {
+            color: #ffffff;
+            font-size: 1.4em; /* שעה גדולה יותר */
+            text-shadow: 0 0 5px #daa520;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="zmanim-board">
+    <div class="header">
+        <div id="hebrew-date">טוען תאריך...</div>
+        <div id="parasha"></div>
+        <div id="gregorian-date"></div>
+    </div>
+    <ul class="zmanim-list" id="zmanim-container">
+        <li class="loading">טוען זמני היום לקרית אתא...</li>
+    </ul>
+</div>
+
+<script>
+    // מזהה העיר קרית אתא
+    const CITY_ID = '293845'; 
+
+    // הגדרת דקות לפני שקיעה למנחה
+    const MINCHA_MINUTES_BEFORE_SUNSET = 20;
+
+    const labels = {
+        'alotHaShachar': 'עלות השחר',
+        'misheyakir': 'משיכיר (טלית ותפילין)',
+        'sunrise': 'נץ החמה',
+        'sofZmanShma': 'סוף זמן ק"ש (גר"א)',
+        'sofZmanTfila': 'סוף זמן תפילה (גר"א)',
+        'chatzot': 'חצות היום',
+        'minchaGedola': 'מנחה גדולה',
+        'plagHaMincha': 'פלג המנחה',
+        'specialMincha': 'זמן תפילת מנחה', // התווית החדשה
+        'sunset': 'שקיעה',
+        'tzeit7083deg': 'צאת הכוכבים'
+    };
+
+    // סדר ההצגה - מיקמתי את המנחה המיוחדת לפני השקיעה
+    const displayOrder = [
+        'alotHaShachar',
+        'misheyakir',
+        'sunrise',
+        'sofZmanShma',
+        'sofZmanTfila',
+        'chatzot',
+        'minchaGedola',
+        'plagHaMincha',
+        'specialMincha', // כאן תופיע השורה המודגשת
+        'sunset',
+        'tzeit7083deg'
+    ];
+
+    async function fetchZmanim() {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const url = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${CITY_ID}&date=${today}`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+
+            updateDisplay(data);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            document.getElementById('zmanim-container').innerHTML = '<li style="text-align:center; padding:20px; color:red">שגיאה בטעינת הנתונים</li>';
+        }
+    }
+
+    function formatTime(dateObj) {
+        return dateObj.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function formatIsoTime(isoString) {
+        if (!isoString) return '--:--';
+        return formatTime(new Date(isoString));
+    }
+
+    function updateDisplay(data) {
+        // 1. כותרת תאריך
+        fetch(`https://www.hebcal.com/converter?cfg=json&date=${data.date}&g2h=1&strict=1`)
+            .then(res => res.json())
+            .then(hebrewData => {
+                document.getElementById('hebrew-date').innerText = hebrewData.hebrew;
+                const gregDate = new Date(data.date);
+                document.getElementById('gregorian-date').innerText = gregDate.toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            });
+
+        // 2. בניית הרשימה
+        const container = document.getElementById('zmanim-container');
+        container.innerHTML = '';
+
+        displayOrder.forEach(key => {
+            let timeText = '';
+            let isSpecial = false;
+
+            // חישוב מיוחד למנחה
+            if (key === 'specialMincha' && data.times.sunset) {
+                const sunsetTime = new Date(data.times.sunset);
+                // הפחתת 20 דקות
+                const minchaTime = new Date(sunsetTime.getTime() - MINCHA_MINUTES_BEFORE_SUNSET * 60000);
+                timeText = formatTime(minchaTime);
+                isSpecial = true;
+            } 
+            // זמנים רגילים שמגיעים מ-Hebcal
+            else if (data.times[key]) {
+                timeText = formatIsoTime(data.times[key]);
+            }
+
+            // אם יש לנו זמן להציג (רגיל או מיוחד)
+            if (timeText) {
+                const li = document.createElement('li');
+                li.className = 'zman-item';
+                
+                // הוספת מחלקה מיוחדת לעיצוב אם זה תפילת מנחה
+                if (isSpecial) {
+                    li.classList.add('special-mincha');
+                }
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'zman-label';
+                nameSpan.innerText = labels[key] || key;
+                
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'zman-time';
+                timeSpan.innerText = timeText;
+
+                li.appendChild(nameSpan);
+                li.appendChild(timeSpan);
+                container.appendChild(li);
+            }
+        });
+    }
+
+    fetchZmanim();
+</script>
+
+</body>
+</html>
