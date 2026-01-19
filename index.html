@@ -3,226 +3,555 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>לוח זמני היום - קומפקטי</title>
+    <title>Personal Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+    
     <style>
+        :root {
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --gold: #daa520;
+            --gold-glow: rgba(218, 165, 32, 0.3);
+            --text-main: #ffffff;
+            --text-dim: #aaaaaa;
+            --accent-blue: #60a5fa;
+            --accent-green: #34d399;
+            --accent-red: #ff5252;
+        }
+
         body {
-            background-color: #121212;
-            color: #ffffff;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 10px; /* צמצום שוליים חיצוניים */
+            padding: 10px;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
         }
 
-        .zmanim-board {
+        /* --- Grid Layout --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: auto auto; 
+            grid-template-areas:
+                "clock zmanim"
+                "status life";
+            gap: 15px;
             width: 100%;
-            max-width: 320px; /* הקטנת הרוחב מ-500 ל-320 */
-            background-color: #1e1e1e;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            overflow: hidden;
-            border: 1px solid #daa520; /* מסגרת עדינה יותר */
+            max-width: 700px;
+            align-items: stretch;
         }
 
-        .header {
-            background-color: #2c2c2c;
+        @media (max-width: 600px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "clock"
+                    "zmanim"
+                    "status"
+                    "life";
+            }
+        }
+
+        .clock-card  { grid-area: clock; }
+        .zmanim-card { grid-area: zmanim; }
+        .status-card { grid-area: status; }
+        .life-card   { grid-area: life; }
+
+        /* --- עיצוב כרטיסים כללי --- */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* --- 1. Zmanim Styles --- */
+        .zmanim-header {
             text-align: center;
-            padding: 10px; /* פחות מרווח בכותרת */
-            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 8px;
         }
-
-        #hebrew-date {
-            font-size: 1.3em; /* הקטנת גופן כותרת */
-            font-weight: bold;
-            color: #daa520;
-            margin-bottom: 2px;
-        }
-
-        #gregorian-date {
-            font-size: 0.85em; /* הקטנת תאריך לועזי */
-            color: #aaaaaa;
-        }
-
-        #parasha {
-            font-size: 0.9em;
-            color: #8faae8;
-            margin-top: 4px;
-            font-weight: bold;
-        }
-
-        .zmanim-list {
-            padding: 0;
-            margin: 0;
-            list-style: none;
-        }
-
+        .heb-date { font-size: 1.1em; font-weight: bold; color: var(--gold); }
+        .greg-date { font-size: 0.8em; color: var(--text-dim); margin-top: 2px; }
+        
         .zman-item {
             display: flex;
             justify-content: space-between;
-            padding: 8px 12px; /* צמצום משמעותי של המרווחים בין השורות */
-            border-bottom: 1px solid #333;
-            font-size: 0.95em; /* הקטנת גופן הטקסט ברשימה */
             align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #2a2a2a;
+            font-size: 0.85em;
         }
-
-        .zman-item:last-child {
-            border-bottom: none;
-        }
-
-        .zman-label {
-            color: #e0e0e0;
-        }
-
-        .zman-time {
-            font-weight: bold;
-            color: #4db6ac;
-        }
-
-        /* עיצוב מיוחד למנחה - מותאם לגודל הקטן */
+        .zman-item:last-child { border: none; }
+        .zman-time { font-weight: bold; color: #4db6ac; }
+        
         .special-mincha {
             background-color: rgba(218, 165, 32, 0.15);
-            border-top: 1px solid #daa520;
-            border-bottom: 1px solid #daa520;
-            padding: 10px 12px; 
+            border: 1px solid var(--gold);
+            border-radius: 5px;
+            margin: 5px 0;
+            padding: 5px 8px;
+        }
+        .special-mincha .zman-label { color: #ffeb3b; font-weight: bold; }
+        .special-mincha .zman-time { color: #fff; }
+
+        /* --- 2. Clock Styles --- */
+        .clock-wrapper {
+            display: flex;
+            flex-direction: column; /* שינוי חשוב: סידור אנכי */
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 5px 0;
+            gap: 15px; /* רווח בין השעון האנלוגי לדיגיטלי */
         }
         
-        .special-mincha .zman-label {
-            color: #ffeb3b;
-            font-weight: bold;
-            font-size: 1em;
+        .clock-circle {
+            position: relative;
+            width: 180px; 
+            height: 180px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            border: 2px solid var(--gold-glow);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,0,0,0.8);
+        }
+        
+        /* --- עיצוב חדש לשעון הדיגיטלי החיצוני --- */
+        .digital-clock-container {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 5px 15px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            width: 80%; /* רוחב יחסי */
+            text-align: center;
         }
 
-        .special-mincha .zman-time {
-            color: #ffffff;
-            font-size: 1.1em;
-            text-shadow: 0 0 3px #daa520;
+        .digital-time {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5em;
+            font-weight: bold;
+            letter-spacing: 3px;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(218, 165, 32, 0.4);
+        }
+
+        .clock-num {
+            position: absolute;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--gold);
+            width: 20px; height: 20px;
+            text-align: center; line-height: 20px;
+        }
+        .num-12 { top: 8px; left: 50%; transform: translateX(-50%); }
+        .num-3  { right: 8px; top: 50%; transform: translateY(-50%); }
+        .num-6  { bottom: 8px; left: 50%; transform: translateX(-50%); }
+        .num-9  { left: 8px; top: 50%; transform: translateY(-50%); }
+        
+        .hand {
+            position: absolute; bottom: 50%; left: 50%;
+            transform-origin: bottom center;
+            border-radius: 5px; transform: translateX(-50%);
+            z-index: 10;
+        }
+        .hour-hand { width: 5px; height: 45px; background: #ccc; }
+        .min-hand { width: 3px; height: 65px; background: var(--gold); }
+        .sec-hand { width: 2px; height: 75px; background: var(--accent-red); z-index: 11; }
+        .center-dot {
+            width: 8px; height: 8px; background: #fff;
+            border: 2px solid var(--accent-red); border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 12;
+        }
+        .marker {
+            position: absolute; background: rgba(255,255,255,0.3);
+            width: 2px; height: 5px; left: 50%; top: 5px;
+            transform-origin: 50% 85px; margin-left: -1px;
         }
         
-        .loading {
+        .weather-widget {
+            position: absolute; 
+            top: 25%; 
+            width: 100%; 
             text-align: center;
-            padding: 15px;
-            font-size: 0.9em;
+            z-index: 5;
         }
+        .weather-icon { font-size: 1.2em; margin-bottom: 2px; display: block; }
+        .weather-temp { font-size: 0.9em; font-weight: bold; }
+
+        /* --- 3. Life Stats --- */
+        .life-card { justify-content: space-between; text-align: center; }
+        
+        .age-display {
+            display: flex; justify-content: center; gap: 8px;
+            font-size: 1em; margin-bottom: 5px;
+        }
+        .age-block .number { display: block; font-size: 1.3em; font-weight: bold; color: #f59e0b; line-height: 1; }
+        .age-block .unit { font-size: 0.6em; color: #888; }
+        .age-subtitle { color: #666; font-size: 0.8em; margin-bottom: 10px; }
+        
+        .stats-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-value { font-size: 1.3em; font-weight: bold; }
+        .stat-value.green { color: var(--accent-green); }
+        .stat-value.blue { color: var(--accent-blue); }
+        .stat-label { font-size: 0.7em; color: #888; }
+
+        .quote-container {
+            border-top: 1px solid #333; padding-top: 10px;
+            font-style: italic; color: #ffff00; font-size: 0.9em; margin-top: auto;
+        }
+
+        /* --- 4. Status Widget --- */
+        .status-card { text-align: center; }
+        .bsad { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #666; }
+        .profile-pic { 
+            width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 5px; display: block; 
+            border: 2px solid var(--gold); 
+        }
+        .status-card h1 { font-size: 1em; margin-bottom: 5px; color: var(--text-main); }
+        .status-text { font-size: 1.3em; font-weight: bold; margin: 5px 0; color: #888; }
+        .status-timer { font-size: 1.2em; color: var(--accent-red); margin: 5px 0; font-weight: 500; }
+        .status-message { 
+            font-size: 0.8em; color: var(--text-dim); margin: 5px auto; padding: 5px; 
+            border: 1px solid var(--accent-red); border-radius: 5px; display: inline-block; width: 95%;
+        }
+        .lottie-container { 
+            width: 90px; height: 90px; margin: 5px auto 0; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+
     </style>
 </head>
 <body>
 
-<div class="zmanim-board">
-    <div class="header">
-        <div id="hebrew-date">טוען...</div>
-        <div id="parasha"></div>
-        <div id="gregorian-date"></div>
+<div class="dashboard-container">
+    <div class="bsad">בס"ד</div>
+    <div class="card clock-card">
+        <div class="clock-wrapper">
+            <div class="clock-circle">
+                <div class="clock-num num-12">12</div>
+                <div class="clock-num num-3">3</div>
+                <div class="clock-num num-6">6</div>
+                <div class="clock-num num-9">9</div>
+                <div id="markers-container"></div>
+
+                <div class="weather-widget">
+                    <i class="fas fa-spinner fa-spin weather-icon" id="weather-icon"></i>
+                    <div class="weather-temp" id="weather-temp">--</div>
+                </div>
+
+                <div class="hand hour-hand"></div>
+                <div class="hand min-hand"></div>
+                <div class="hand sec-hand"></div>
+                <div class="center-dot"></div>
+            </div>
+            
+            <div class="digital-clock-container">
+                <div class="digital-time">00:00:00</div>
+            </div>
+        </div>
     </div>
-    <ul class="zmanim-list" id="zmanim-container">
-        <li class="loading">טוען נתונים...</li>
-    </ul>
+
+    <div class="card zmanim-card">
+        <div class="zmanim-header">
+            <div class="heb-date" id="hebrew-date">טוען...</div>
+            <div class="greg-date" id="gregorian-date"></div>
+        </div>
+        <div id="zmanim-list">
+            <div style="text-align:center; padding:10px;">טוען...</div>
+        </div>
+    </div>
+
+    <div class="card status-card">
+        <img src="https://futureflow.co.il/images/unnamed (3).jpg" alt="תמונה" class="profile-pic">
+        <h1>סטטוס עבודה</h1>
+        
+        <div class="status-text" id="status">טוען...</div>
+        <div class="status-timer" id="timer" style="display: none;">00:00:00</div>
+        
+        <div class="status-message" id="message" style="display: none;">
+          נא לא להפריע,<br>אא"כ במקרה חירום
+        </div>
+
+        <div id="lottie-available" class="lottie-container" style="display: none;">
+          <dotlottie-player src="https://lottie.host/d78d6b98-ceea-4052-9e64-afbca709db89/5qcU2UpfX3.lottie" background="transparent" speed="1" style="width: 90px; height: 90px;" loop autoplay></dotlottie-player>
+        </div>
+        <div id="lottie-out-of-office" class="lottie-container" style="display: none;">
+          <dotlottie-player src="https://lottie.host/fc817ebb-d8a7-4655-b7c4-fcc34ac727ef/QV6LGflYIu.lottie" background="transparent" speed="1" style="width: 90px; height: 90px;" loop autoplay></dotlottie-player>
+        </div>
+        <div id="lottie-emergency" class="lottie-container" style="display: none;">
+          <dotlottie-player src="https://lottie.host/69e8a7a2-c622-495d-864e-59b3eb4b3479/STDGNXK7EF.lottie" background="transparent" speed="1" style="width: 90px; height: 90px;" loop autoplay></dotlottie-player>
+        </div>
+    </div>
+
+    <div class="card life-card">
+        <div>
+            <div class="age-header">
+                <div class="age-display" id="age-breakdown"></div>
+                <div class="age-subtitle">הגיל המדויק שלי</div>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid #333; margin: 10px 0; opacity: 0.5;">
+
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value green" id="days-on-planet">0</div>
+                    <div class="stat-label">ימים על הפלנטה 🌍</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value blue" id="days-until-85">0</div>
+                    <div class="stat-label">ימים עד גיל 85 🏁</div>
+                </div>
+            </div>
+        </div>
+        <div class="quote-container" id="quote-box">"טוען ציטוט..."</div>
+    </div>
+
 </div>
 
 <script>
-    // מזהה העיר קרית אתא
-    const CITY_ID = '293845'; 
-
-    // הגדרת דקות לפני שקיעה למנחה
-    const MINCHA_MINUTES_BEFORE_SUNSET = 20;
-
-    const labels = {
-        'sunrise': 'נץ החמה',
-        'sofZmanShma': 'סוף זמן ק"ש (גר"א)',
-        'sofZmanTfila': 'סוף זמן תפילה',
-        'chatzot': 'חצות היום',
-        'minchaGedola': 'מנחה גדולה',
-        'plagHaMincha': 'פלג המנחה',
-        'specialMincha': 'מנחה', // טקסט קצר יותר
-        'sunset': 'שקיעה',
-        'tzeit7083deg': 'צאת הכוכבים'
+    const CONFIG = {
+        cityId: '293845', 
+        coords: { lat: 32.809, lon: 35.120 },
+        dob: "1991-01-09", 
+        minchaMinutesBeforeSunset: 20
     };
 
-    const displayOrder = [
-        'sunrise',
-        'sofZmanShma',
-        'sofZmanTfila',
-        'chatzot',
-        'minchaGedola',
-        'plagHaMincha',
-        'specialMincha',
-        'sunset',
-        'tzeit7083deg'
-    ];
+    // --- Weather Logic ---
+    async function fetchWeather() {
+        try {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.coords.lat}&longitude=${CONFIG.coords.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            document.getElementById('weather-temp').innerText = Math.round(data.current.temperature_2m) + "°C בקרית אתא";
+            
+            const code = data.current.weather_code;
+            const isDay = data.current.is_day;
+            const iconEl = document.getElementById('weather-icon');
+            
+            let iconClass = 'fa-sun';
+            if (code <= 3) { 
+                iconClass = isDay ? 'fa-sun' : 'fa-moon';
+                if (code > 0) iconClass = isDay ? 'fa-cloud-sun' : 'fa-cloud-moon';
+            } else if (code <= 48) iconClass = 'fa-smog';
+            else if (code <= 67) iconClass = 'fa-cloud-rain';
+            else if (code <= 77) iconClass = 'fa-snowflake';
+            else if (code <= 99) iconClass = 'fa-bolt';
 
-    async function fetchZmanim() {
+            iconEl.className = `fas ${iconClass} weather-icon`;
+            iconEl.style.color = '#4db6ac';
+
+        } catch(e) { console.error("Weather error"); }
+    }
+
+    // --- Clock Logic ---
+    function initClock() {
+        const markersContainer = document.getElementById('markers-container');
+        for (let i = 0; i < 60; i++) {
+            if (i % 5 !== 0) { 
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.style.transform = `rotate(${i * 6}deg)`;
+                markersContainer.appendChild(marker);
+            }
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+        fetchWeather();
+        setInterval(fetchWeather, 600000);
+    }
+
+    function updateClock() {
+        const now = new Date();
+        const sec = now.getSeconds(); const min = now.getMinutes(); const hr = now.getHours();
+        const secDeg = (sec / 60) * 360; const minDeg = (min / 60) * 360 + (sec / 60) * 6; const hrDeg = (hr % 12 / 12) * 360 + (min / 60) * 30;
+        document.querySelector('.sec-hand').style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+        document.querySelector('.min-hand').style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+        document.querySelector('.hour-hand').style.transform = `translateX(-50%) rotate(${hrDeg}deg)`;
+        document.querySelector('.digital-time').innerText = now.toLocaleTimeString('en-US', {hour12: false});
+    }
+
+    // --- Zmanim Logic ---
+    async function initZmanim() {
         try {
             const today = new Date().toISOString().split('T')[0];
-            const url = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${CITY_ID}&date=${today}`;
-            
-            const response = await fetch(url);
-            const data = await response.json();
+            const url = `https://www.hebcal.com/zmanim?cfg=json&geonameid=${CONFIG.cityId}&date=${today}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const convRes = await fetch(`https://www.hebcal.com/converter?cfg=json&date=${data.date}&g2h=1&strict=1`);
+            const hebData = await convRes.json();
+            document.getElementById('hebrew-date').innerText = hebData.hebrew;
+            document.getElementById('gregorian-date').innerText = new Date(data.date).toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
+            renderZmanimList(data.times);
+        } catch (e) { console.error(e); }
+    }
 
-            updateDisplay(data);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            document.getElementById('zmanim-container').innerHTML = '<li style="text-align:center; padding:10px; color:red">שגיאה</li>';
+    function renderZmanimList(times) {
+        const labels = {
+            'sunrise': 'נץ החמה', 'sofZmanShma': 'סוף זמן ק"ש (גר"א)', 'sofZmanTfila': 'סוף זמן תפילה',
+            'chatzot': 'חצות היום', 'minchaGedola': 'מנחה גדולה', 'plagHaMincha': 'פלג המנחה',
+            'sunset': 'שקיעה', 'tzeit7083deg': 'צאת הכוכבים'
+        };
+        const listEl = document.getElementById('zmanim-list');
+        listEl.innerHTML = '';
+        const order = ['sunrise', 'sofZmanShma', 'sofZmanTfila', 'chatzot', 'minchaGedola', 'plagHaMincha', 'sunset', 'tzeit7083deg'];
+        const allTimes = [];
+        order.forEach(key => { if(times[key]) allTimes.push({ key, time: new Date(times[key]), label: labels[key] }); });
+        if(times.sunset) {
+            const sunset = new Date(times.sunset);
+            const minchaTime = new Date(sunset.getTime() - CONFIG.minchaMinutesBeforeSunset * 60000);
+            allTimes.push({ key: 'specialMincha', time: minchaTime, label: 'מנחה (20 דק׳ לפני שקיעה)', special: true });
         }
-    }
-
-    function formatTime(dateObj) {
-        return dateObj.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
-
-    function formatIsoTime(isoString) {
-        if (!isoString) return '--:--';
-        return formatTime(new Date(isoString));
-    }
-
-    function updateDisplay(data) {
-        fetch(`https://www.hebcal.com/converter?cfg=json&date=${data.date}&g2h=1&strict=1`)
-            .then(res => res.json())
-            .then(hebrewData => {
-                document.getElementById('hebrew-date').innerText = hebrewData.hebrew;
-                const gregDate = new Date(data.date);
-                document.getElementById('gregorian-date').innerText = gregDate.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' }); // תאריך לועזי מקוצר
-            });
-
-        const container = document.getElementById('zmanim-container');
-        container.innerHTML = '';
-
-        displayOrder.forEach(key => {
-            let timeText = '';
-            let isSpecial = false;
-
-            if (key === 'specialMincha' && data.times.sunset) {
-                const sunsetTime = new Date(data.times.sunset);
-                const minchaTime = new Date(sunsetTime.getTime() - MINCHA_MINUTES_BEFORE_SUNSET * 60000);
-                timeText = formatTime(minchaTime);
-                isSpecial = true;
-            } else if (data.times[key]) {
-                timeText = formatIsoTime(data.times[key]);
-            }
-
-            if (timeText) {
-                const li = document.createElement('li');
-                li.className = 'zman-item';
-                
-                if (isSpecial) {
-                    li.classList.add('special-mincha');
-                }
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.className = 'zman-label';
-                nameSpan.innerText = labels[key] || key;
-                
-                const timeSpan = document.createElement('span');
-                timeSpan.className = 'zman-time';
-                timeSpan.innerText = timeText;
-
-                li.appendChild(nameSpan);
-                li.appendChild(timeSpan);
-                container.appendChild(li);
-            }
+        allTimes.sort((a, b) => a.time - b.time);
+        allTimes.forEach(item => {
+            const div = document.createElement('div');
+            div.className = item.special ? 'zman-item special-mincha' : 'zman-item';
+            div.innerHTML = `<span class="zman-label">${item.label}</span><span class="zman-time">${item.time.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'})}</span>`;
+            listEl.appendChild(div);
         });
     }
 
-    fetchZmanim();
+    // --- Life Stats Logic ---
+    const quotes = ["דע מאין באת", "אם אין אני לי, מי לי?", "מצווה גדולה להיות בשמחה", "כל העולם כולו גשר צר מאוד", "ואהבת לרעך כמוך"];
+    function initLifeStats() {
+        setInterval(calculateLifeStats, 1000);
+        calculateLifeStats();
+        updateQuote();
+        setInterval(updateQuote, 3600000);
+    }
+    function updateQuote() { document.getElementById('quote-box').innerText = `"${quotes[Math.floor(Math.random() * quotes.length)]}"`; }
+    function calculateLifeStats() {
+        const dob = new Date(CONFIG.dob);
+        const now = new Date();
+        const diffMs = now.getTime() - dob.getTime();
+        document.getElementById('days-on-planet').innerText = parseFloat((diffMs / (1000 * 60 * 60 * 24)).toFixed(1)).toLocaleString();
+        let years = now.getFullYear() - dob.getFullYear();
+        let tempDob = new Date(dob); tempDob.setFullYear(now.getFullYear());
+        if (now < tempDob) years--;
+        let lastBirthday = new Date(dob); lastBirthday.setFullYear(dob.getFullYear() + years);
+        const diffBirthday = now - lastBirthday;
+        const days = Math.floor(diffBirthday / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diffBirthday % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diffBirthday % (1000 * 60 * 60)) / (1000 * 60));
+        document.getElementById('age-breakdown').innerHTML = `
+            <div class="age-block"><span class="number">${years}</span><span class="unit">שנים</span></div>
+            <div class="age-block"><span class="number">${days}</span><span class="unit">ימים</span></div>
+            <div class="age-block"><span class="number">${hours}</span><span class="unit">שעות</span></div>
+            <div class="age-block"><span class="number">${minutes}</span><span class="unit">דקות</span></div>
+        `;
+        const targetDate = new Date(dob); targetDate.setFullYear(dob.getFullYear() + 85);
+        document.getElementById('days-until-85').innerText = parseInt(((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)).toFixed(0)).toLocaleString();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => { initZmanim(); initClock(); initLifeStats(); });
+</script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCfNQUoIMIG_LZgJRq_iRM5IXTQG8Tk3Rs",
+      authDomain: "work-status-ffe43.firebaseapp.com",
+      projectId: "work-status-ffe43",
+      storageBucket: "work-status-ffe43.firebasestorage.app",
+      messagingSenderId: "1034975092296",
+      appId: "1:1034975092296:web:362f3492e1686ac27b027d",
+      measurementId: "G-EMM4MWKX71"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let timerId = null; 
+
+    const statusDocRef = doc(db, "status", "mainStatus");
+
+    onSnapshot(statusDocRef, (doc) => {
+      if (!doc.exists()) {
+        document.getElementById('status').textContent = 'אין מידע';
+        return;
+      }
+      const data = doc.data();
+      updateStatusOnPage(data);
+    }, (error) => {
+      console.error("Firebase Error:", error);
+    });
+
+    function updateStatusOnPage(data) {
+        const statusElement = document.getElementById('status');
+        const timerElement = document.getElementById('timer');
+        const messageElement = document.getElementById('message');
+        const lottieAvailable = document.getElementById('lottie-available');
+        const lottieOutOfOffice = document.getElementById('lottie-out-of-office');
+        const lottieEmergency = document.getElementById('lottie-emergency');
+
+        if (timerId) { clearInterval(timerId); timerId = null; }
+
+        lottieAvailable.style.display = 'none';
+        lottieOutOfOffice.style.display = 'none';
+        lottieEmergency.style.display = 'none';
+        timerElement.style.display = 'none';
+        messageElement.style.display = 'none';
+
+        statusElement.textContent = data.text;
+
+        if (data.text === 'עסוק') {
+          timerElement.style.display = 'block';
+          messageElement.style.display = 'inline-block';
+          
+          if (!data.until || !data.until.toDate) {
+            timerElement.textContent = '';
+            return;
+          }
+
+          const endTime = data.until.toDate().getTime(); 
+          
+          const updateTimer = () => {
+            const now = new Date().getTime();
+            const timeLeft = endTime - now;
+
+            if (timeLeft <= 0) {
+              timerElement.style.display = 'none';
+              return;
+            }
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            timerElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          };
+          updateTimer(); 
+          timerId = setInterval(updateTimer, 1000); 
+
+        } else if (data.text === 'יצאתי להציל חיים') {
+          lottieEmergency.style.display = 'flex';
+          statusElement.style.color = '#ff5252';
+        } else if (data.text === 'מחוץ למשרד') {
+          lottieOutOfOffice.style.display = 'flex';
+          statusElement.style.color = '#aaaaaa';
+        } else if (data.text === 'זמין') {
+          lottieAvailable.style.display = 'flex';
+          statusElement.style.color = '#34d399';
+        } else {
+             statusElement.style.color = '#60a5fa'; // צבע ברירת מחדל
+        }
+    }
 </script>
 
 </body>
