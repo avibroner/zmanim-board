@@ -334,32 +334,63 @@
     };
 
     // --- Weather Logic ---
-    async function fetchWeather() {
-        try {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.coords.lat}&longitude=${CONFIG.coords.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`;
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            document.getElementById('weather-temp').innerText = Math.round(data.current.temperature_2m) + "°C בקרית אתא";
-            
-            const code = data.current.weather_code;
-            const isDay = data.current.is_day;
-            const iconEl = document.getElementById('weather-icon');
-            
-            let iconClass = 'fa-sun';
-            if (code <= 3) { 
+   async function fetchWeather() {
+    try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.coords.lat}&longitude=${CONFIG.coords.lon}&current=temperature_2m,weather_code,is_day&timezone=auto`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        // עדכון טמפרטורה
+        document.getElementById('weather-temp').innerText = Math.round(data.current.temperature_2m) + "°C בקרית אתא";
+        
+        const code = data.current.weather_code;
+        const isDay = data.current.is_day;
+        const iconEl = document.getElementById('weather-icon');
+        const descEl = document.getElementById('weather-desc'); // אלמנט לתיאור הטקסטואלי
+        
+        let iconClass, descText, iconColor;
+
+        if (code <= 3) { 
+            if (code === 0) {
                 iconClass = isDay ? 'fa-sun' : 'fa-moon';
-                if (code > 0) iconClass = isDay ? 'fa-cloud-sun' : 'fa-cloud-moon';
-            } else if (code <= 48) iconClass = 'fa-smog';
-            else if (code <= 67) iconClass = 'fa-cloud-rain';
-            else if (code <= 77) iconClass = 'fa-snowflake';
-            else if (code <= 99) iconClass = 'fa-bolt';
+                descText = isDay ? 'בהיר' : 'לילה בהיר';
+                iconColor = isDay ? '#FFD700' : '#F5F3CE'; // צהוב שמש / לבן ירח
+            } else {
+                iconClass = isDay ? 'fa-cloud-sun' : 'fa-cloud-moon';
+                descText = 'מעונן חלקית';
+                iconColor = '#B0BEC5'; // אפור בהיר
+            }
+        } else if (code <= 48) {
+            iconClass = 'fa-smog';
+            descText = 'ערפילי / אובך';
+            iconColor = '#90A4AE'; // אפור מתכתי
+        } else if (code <= 67) {
+            iconClass = 'fa-cloud-showers-heavy';
+            descText = 'גשום';
+            iconColor = '#4FC3F7'; // תכלת מים
+        } else if (code <= 77) {
+            iconClass = 'fa-snowflake';
+            descText = 'שלג';
+            iconColor = '#E3F2FD'; // לבן שלג
+        } else if (code <= 99) {
+            iconClass = 'fa-bolt';
+            descText = 'סופות רעמים';
+            iconColor = '#7E57C2'; // סגול עמוק
+        }
 
-            iconEl.className = `fas ${iconClass} weather-icon`;
-            iconEl.style.color = '#4db6ac';
+        // עדכון האייקון
+        iconEl.className = `fas ${iconClass} weather-icon`;
+        iconEl.style.color = iconColor;
 
-        } catch(e) { console.error("Weather error"); }
-    }
+        // עדכון הטקסט (אם קיים אלמנט כזה)
+        if (descEl) {
+            descEl.innerText = descText;
+            descEl.style.fontSize = '0.8em'; // טקסט בקטן
+            descEl.style.display = 'block';
+        }
+
+    } catch(e) { console.error("Weather error", e); }
+}
 
     // --- Clock Logic ---
     function initClock() {
@@ -556,3 +587,4 @@
 
 </body>
 </html>
+
