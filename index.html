@@ -484,10 +484,10 @@
         const hours = Math.floor((diffBirthday % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((diffBirthday % (1000 * 60 * 60)) / (1000 * 60));
         document.getElementById('age-breakdown').innerHTML = `
-            <div class="age-block"><span class="number">${years}</span><span class="unit">שנים</span></div>
-            <div class="age-block"><span class="number">${days}</span><span class="unit">ימים</span></div>
-            <div class="age-block"><span class="number">${hours}</span><span class="unit">שעות</span></div>
             <div class="age-block"><span class="number">${minutes}</span><span class="unit">דקות</span></div>
+            <div class="age-block"><span class="number">${hours}</span><span class="unit">שעות</span></div>
+            <div class="age-block"><span class="number">${days}</span><span class="unit">ימים</span></div>
+            <div class="age-block"><span class="number">${years}</span><span class="unit">שנים</span></div>
         `;
         const targetDate = new Date(dob); targetDate.setFullYear(dob.getFullYear() + 85);
         document.getElementById('days-until-85').innerText = parseInt(((targetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)).toFixed(0)).toLocaleString();
@@ -589,6 +589,7 @@
 
 </body>
 </html>
+
 
 
 
